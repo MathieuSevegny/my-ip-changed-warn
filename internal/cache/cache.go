@@ -1,4 +1,4 @@
-package src
+package cache
 
 import (
 	"io"
@@ -8,19 +8,24 @@ import (
 )
 
 type CacheProvider struct {
-	folder   string
-	filename string
+	Folder   string
+	Filename string
 }
 
 func (cache *CacheProvider) GetFilePath() string {
-	return filepath.Join(cache.folder, cache.filename)
+	return filepath.Join(cache.Folder, cache.Filename)
 }
 
 func (cache *CacheProvider) Save(content string) error {
 	cache.EnsureCreated()
 	filepath := cache.GetFilePath()
 	err := os.Truncate(filepath, 0)
-	file, err := os.Open(filepath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	file, err := os.OpenFile(filepath, os.O_RDWR, 0666)
 
 	if err != nil {
 		log.Fatal(err)
@@ -36,6 +41,7 @@ func (cache *CacheProvider) Save(content string) error {
 
 func (cache *CacheProvider) Get() (string, error) {
 	cache.EnsureCreated()
+
 	file_path := cache.GetFilePath()
 
 	file, err := os.Open(file_path)
@@ -52,9 +58,13 @@ func (cache *CacheProvider) Get() (string, error) {
 }
 
 func (cache *CacheProvider) EnsureCreated() {
+	if cache.Folder == "" || cache.Filename == "" {
+		cache.Folder = "./cache"
+		cache.Filename = "last_ip.txt"
+	}
 	//If folder does not exist, create it
-	if _, err := os.Stat(cache.folder); os.IsNotExist(err) {
-		err = os.MkdirAll(cache.folder, os.ModePerm)
+	if _, err := os.Stat(cache.Folder); os.IsNotExist(err) {
+		err = os.MkdirAll(cache.Folder, os.ModePerm)
 
 		if err != nil {
 			log.Fatal(err)

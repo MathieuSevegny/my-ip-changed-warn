@@ -1,4 +1,4 @@
-package src
+package env
 
 import "os"
 
@@ -9,6 +9,7 @@ type EnvVariables struct {
 	EMAIL_TO          string
 	EMAIL_FROM        string
 	EMAIL_TOKEN       string
+	SMTP_HOST         string
 	SECONDS_TO_WAIT   string
 	DEVICE_NAME       string
 	MAX_TRIES         string
@@ -22,6 +23,7 @@ func ReadEnv() *EnvVariables {
 		EMAIL_TO:          os.Getenv("EMAIL_TO"),
 		EMAIL_FROM:        os.Getenv("EMAIL_FROM"),
 		EMAIL_TOKEN:       os.Getenv("EMAIL_TOKEN"),
+		SMTP_HOST:         os.Getenv("SMTP_HOST"),
 		SECONDS_TO_WAIT:   os.Getenv("SECONDS_TO_WAIT"),
 		DEVICE_NAME:       os.Getenv("DEVICE_NAME"),
 		MAX_TRIES:         os.Getenv("MAX_TRIES"),
