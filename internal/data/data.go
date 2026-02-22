@@ -47,6 +47,10 @@ func (d *DataProvider) Get() (string, error) {
 		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
+	if len(content) == 0 {
+		return "unknown", nil
+	}
+
 	return string(content), nil
 }
 

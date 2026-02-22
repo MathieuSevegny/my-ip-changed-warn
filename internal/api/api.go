@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	_ "golang.org/x/crypto/x509roots/fallback"
 )
@@ -20,7 +21,11 @@ func (client ApiClient) GetPublicIp() (string, error) {
 	if resp.StatusCode == http.StatusTooManyRequests {
 		askedToRetryAfter := resp.Header.Get("Retry-After")
 		if askedToRetryAfter != "" {
-			return "", fmt.Errorf("too many requests: %d, retry after: %ss", resp.StatusCode, askedToRetryAfter)
+			duration, err := time.ParseDuration(askedToRetryAfter + "s")
+			if err != nil {
+				return "", fmt.Errorf("too many requests: %d, retry after: %s (error parsing duration: %s)", resp.StatusCode, askedToRetryAfter, err)
+			}
+			return "", fmt.Errorf("too many requests: %d, retry after: %ss", resp.StatusCode, duration.String())
 		}
 		return "", fmt.Errorf("too many requests: %d", resp.StatusCode)
 	}
