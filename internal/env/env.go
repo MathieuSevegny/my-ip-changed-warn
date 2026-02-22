@@ -36,7 +36,7 @@ func ReadEnv() (*EnvVariables, error) {
 	if givenValue := os.Getenv("API_ENDPOINT"); givenValue != "" {
 		apiEndpoint = givenValue
 	}
-	dataFilePath := "data/current_ip.txt"
+	dataFilePath := "/data/last_ip.txt"
 	if givenValue := os.Getenv("DATA_FILE_PATH"); givenValue != "" {
 		dataFilePath = givenValue
 	}
