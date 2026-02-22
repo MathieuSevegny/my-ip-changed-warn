@@ -1,31 +1,69 @@
 package env
 
-import "os"
+import (
+	"fmt"
+	"log"
+	"os"
+	"time"
+)
 
 type EnvVariables struct {
-	API_ENDPOINT      string
-	CACHE_FOLDER_PATH string
-	CACHE_FILENAME    string
-	EMAIL_TO          string
-	EMAIL_FROM        string
-	EMAIL_TOKEN       string
-	SMTP_HOST         string
-	SECONDS_TO_WAIT   string
-	DEVICE_NAME       string
-	MAX_TRIES         string
+	ApiEndpoint  string
+	DataFilePath string
+	EmailTo      string
+	EmailFrom    string
+	EmailToken   string
+	SmtpHost     string
+	WaitTime     time.Duration
+	DeviceName   string
 }
 
-func ReadEnv() *EnvVariables {
-	return &EnvVariables{
-		API_ENDPOINT:      os.Getenv("API_ENDPOINT"),
-		CACHE_FOLDER_PATH: os.Getenv("CURRENT_FOLDER_PATH"),
-		CACHE_FILENAME:    os.Getenv("CACHE_FILENAME"),
-		EMAIL_TO:          os.Getenv("EMAIL_TO"),
-		EMAIL_FROM:        os.Getenv("EMAIL_FROM"),
-		EMAIL_TOKEN:       os.Getenv("EMAIL_TOKEN"),
-		SMTP_HOST:         os.Getenv("SMTP_HOST"),
-		SECONDS_TO_WAIT:   os.Getenv("SECONDS_TO_WAIT"),
-		DEVICE_NAME:       os.Getenv("DEVICE_NAME"),
-		MAX_TRIES:         os.Getenv("MAX_TRIES"),
+var RequiredEnvVariables = []string{
+	"EMAIL_TO",
+	"EMAIL_FROM",
+	"EMAIL_TOKEN",
+	"SMTP_HOST",
+}
+
+func ReadEnv() (*EnvVariables, error) {
+	waitTime := 5 * time.Minute
+	if givenValue, err := time.ParseDuration(os.Getenv("WAIT_TIME")); err != nil {
+		log.Printf("error parsing duration: %s, default will be used (%s).", err, waitTime.String())
+	} else {
+		waitTime = givenValue
 	}
+	apiEndpoint := "https://api.ipify.org/"
+	if givenValue := os.Getenv("API_ENDPOINT"); givenValue != "" {
+		apiEndpoint = givenValue
+	}
+	dataFilePath := "data/current_ip.txt"
+	if givenValue := os.Getenv("DATA_FILE_PATH"); givenValue != "" {
+		dataFilePath = givenValue
+	}
+	deviceName := "your server"
+	if givenValue := os.Getenv("DEVICE_NAME"); givenValue != "" {
+		deviceName = givenValue
+	}
+
+	missingEnvVar := false
+	for _, envVar := range RequiredEnvVariables {
+		if os.Getenv(envVar) == "" {
+			log.Printf("required environment variable %s is not set", envVar)
+		}
+	}
+
+	if missingEnvVar {
+		return nil, fmt.Errorf("one or more required environment variables are missing")
+	}
+
+	return &EnvVariables{
+		ApiEndpoint:  apiEndpoint,
+		DataFilePath: dataFilePath,
+		EmailTo:      os.Getenv("EMAIL_TO"),
+		EmailFrom:    os.Getenv("EMAIL_FROM"),
+		EmailToken:   os.Getenv("EMAIL_TOKEN"),
+		SmtpHost:     os.Getenv("SMTP_HOST"),
+		WaitTime:     waitTime,
+		DeviceName:   deviceName,
+	}, nil
 }

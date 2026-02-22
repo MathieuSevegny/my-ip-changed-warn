@@ -1,21 +1,19 @@
 # my-ip-changed-warn
-Simple script to warn you when your IP changes
+Simple service to warn you (by mail) when your public IP changes.
 
-## Configuration
-```docker-compose.yml
+## Configuration (docker-compose)
+```yaml
 services:
   ip-warner:
     image: my-ip-changed-warn
     environment:
-      - EMAIL_TO=<EMAIL_THAT_RECEIVES_WARNING>
-      - EMAIL_FROM=<EMAIL_THAT_SENDS_WARNING>
-      - EMAIL_TOKEN=<TOKEN_FOR_SMTP_AUTH>
-      - SMTP_HOST=<SMTP_HOST>
+      - EMAIL_TO=<EMAIL_THAT_RECEIVES_WARNING> # required
+      - EMAIL_FROM=<EMAIL_THAT_SENDS_WARNING> # required
+      - EMAIL_TOKEN=<TOKEN_FOR_SMTP_AUTH> # required
+      - SMTP_HOST=<SMTP_HOST> # required
       - DEVICE_NAME=<NAME_OF_DEVICE>
-      - MAX_TRIES=10
-      - SECONDS_TO_WAIT=2
-      - CACHE_FOLDER_PATH=/cache
-      - CACHE_FILENAME=last_ip.txt
+      - WAIT_TIME=2s
+      - CACHE_FILE_PATH=/cache/last_ip.txt
     volumes:
       - ./cache:/cache
 ```

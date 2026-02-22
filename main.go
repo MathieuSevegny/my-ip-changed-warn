@@ -1,93 +1,68 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"my-ip-changed-warn/internal/api"
-	"my-ip-changed-warn/internal/cache"
+	"my-ip-changed-warn/internal/data"
 	"my-ip-changed-warn/internal/email"
 	"my-ip-changed-warn/internal/env"
-	"strconv"
 	"time"
 )
 
 func main() {
-	envValues := env.ReadEnv()
+	envValues, err := env.ReadEnv()
 
-	cacheProvider := &cache.CacheProvider{
-		Folder:   envValues.CACHE_FOLDER_PATH,
-		Filename: envValues.CACHE_FILENAME,
+	if err != nil {
+		log.Fatalf("error reading environment variables: %s", err)
+	}
+
+	dataProvider := &data.DataProvider{
+		FilePath: envValues.DataFilePath,
 	}
 	apiClient := &api.ApiClient{
-		Endpoint: envValues.API_ENDPOINT,
+		Endpoint: envValues.ApiEndpoint,
 	}
 	emailClient := &email.EmailClient{
-		From:  envValues.EMAIL_FROM,
-		To:    envValues.EMAIL_TO,
-		Token: envValues.EMAIL_TOKEN,
-		Host:  envValues.SMTP_HOST,
+		From:  envValues.EmailFrom,
+		To:    envValues.EmailTo,
+		Token: envValues.EmailToken,
+		Host:  envValues.SmtpHost,
 	}
 
-	var waitTime time.Duration = 5 * time.Second
+	ticker := time.NewTicker(envValues.WaitTime)
 
-	givenValue, err := time.ParseDuration(envValues.SECONDS_TO_WAIT + "s")
-
-	if err != nil {
-		log.Printf("error parsing duration: %s", err)
-	} else {
-		waitTime = givenValue
-	}
-
-	numberOfTries := 0
-	var maxTries uint64 = 5
-
-	number, err := strconv.ParseUint(envValues.MAX_TRIES, 10, 64)
-
-	if err != nil {
-		maxTries = number
-		log.Printf("error parsing max tries, default will be used (%d): %s", maxTries, err)
-	}
-
-	log.Print("Listening for IP changes...")
-	for {
-		oldIp, err := cacheProvider.Get()
-
+	log.Printf("Listening for IP changes periodically (every %s). Press Ctrl+C to exit.", envValues.WaitTime.String())
+	for range ticker.C {
+		oldIp, err := dataProvider.Get()
 		if err != nil {
-			log.Printf("error getting public ip: %s", err)
-			numberOfTries++
-			time.Sleep(waitTime)
+			log.Printf("error getting public ip from storage: %s", err)
 			continue
 		}
 
 		currentIp, err := apiClient.GetPublicIp()
-
 		if err != nil {
 			log.Printf("error getting public ip: %s", err)
-			numberOfTries++
-			time.Sleep(waitTime)
+			continue
+		}
+		if oldIp == currentIp {
 			continue
 		}
 
-		if oldIp == currentIp {
-			time.Sleep(waitTime)
-			continue
-		}
 		log.Printf("old ip: %s, current ip: %s", oldIp, currentIp)
 
-		err = emailClient.SendEmail("Public IP of "+envValues.DEVICE_NAME+" changed", "New public IPv4 address : "+currentIp)
-
-		if err != nil {
+		subject := fmt.Sprintf("[WARN] Public IP of %s changed", envValues.DeviceName)
+		message := fmt.Sprintf("The new public IPv4 address of %s is now : %s", envValues.DeviceName, currentIp)
+		if err = emailClient.SendEmail(subject, message); err != nil {
 			log.Printf("error sending email: %s", err)
-			numberOfTries++
 		} else {
 			log.Printf("email sent successfully!")
 			// Save the new IP to the cache only if the email was sent successfully
-			err = cacheProvider.Save(currentIp)
+			err = dataProvider.Save(currentIp)
 			if err != nil {
-				log.Fatalf("error saving cache: %s", err)
+				log.Printf("error saving public ip to storage: %s", err)
+				continue
 			}
 		}
-
-		time.Sleep(waitTime)
 	}
-
 }
